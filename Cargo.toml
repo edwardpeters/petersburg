@@ -1,0 +1,16 @@
+[package]
+name = "petersburg"
+version = "0.0.1"
+
+[dependencies]
+png = "0.17.5"
+rand = "*"
+gtk = "*"
+gdk = "*"
+glib = "*"
+colored = "*"
+once_cell = "*"
+single_value_channel = "*"
+crossbeam = "*"
+priority-queue = "*"
+cairo-rs = {version = "0.15.10", features = ["png"]}
