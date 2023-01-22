@@ -26,7 +26,7 @@ pub enum Compass {
 
 impl From<usize> for Compass {
     fn from(i: usize) -> Compass {
-        use general::direction::Compass::*;
+        use self::Compass::*;
         match i % 8 {
             0 => N,
             1 => NE,
@@ -49,7 +49,7 @@ impl Display for Compass {
 
 impl Direction for Compass {
     fn step(&self) -> (i32, i32) {
-        use general::direction::Compass::*;
+        use self::Compass::*;
         match self {
             N => (0, -1),
             NE => (1, -1),
@@ -74,7 +74,7 @@ impl Direction for Compass {
         Compass::from(rand::random::<usize>() % 8)
     }
     fn all() -> Vec<Compass> {
-        use general::direction::Compass::*;
+        use self::Compass::*;
         vec![N, NW, W, SW, S, SE, E, NE]
     }
 }
@@ -95,7 +95,7 @@ impl Display for Cardinal {
 
 impl From<usize> for Cardinal {
     fn from(i: usize) -> Cardinal {
-        use general::direction::Cardinal::*;
+        use self::Cardinal::*;
         match i % 8 {
             0 => N,
             1 => E,
@@ -108,7 +108,7 @@ impl From<usize> for Cardinal {
 
 impl Direction for Cardinal {
     fn step(&self) -> (i32, i32) {
-        use general::direction::Cardinal::*;
+        use self::Cardinal::*;
         match self {
             N => (0, -1),
             E => (1, 0),
@@ -126,7 +126,7 @@ impl Direction for Cardinal {
         Cardinal::from((*self as usize + 2) % 4)
     }
     fn all() -> Vec<Cardinal> {
-        use general::direction::Cardinal::*;
+        use self::Cardinal::*;
         vec![N, W, S, E]
     }
     fn rand() -> Cardinal {

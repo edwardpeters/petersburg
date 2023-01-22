@@ -3,6 +3,7 @@ name = "petersburg"
 version = "0.0.1"
 
 [dependencies]
+itertools = "*"
 png = "0.17.5"
 rand = "*"
 gtk = "*"
