@@ -1,45 +1,21 @@
-// extern crate cairo;
-// extern crate colored;
-// extern crate gdk;
-// extern crate glib;
-// extern crate gtk;
-// extern crate itertools;
-// extern crate once_cell;
-// extern crate priority_queue;
-// extern crate rand;
+#![allow(unused_labels)]
 
+pub mod burgs;
+pub mod constants;
+pub mod genes;
 pub mod geography;
-//use geography::local::*;
-
-// use gtk::prelude::*;
-// use gtk::{Application, ApplicationWindow, DrawingArea};
-// #[allow(unused_imports)]
-// use mazeburg::Mazeburg;
-// #[allow(unused_imports)]
-// use petersburg::Petersburg;
-// #[allow(unused_imports)]
-// use simple::*;
-// use std::cell::RefCell;
-// use std::sync::Arc;
-// use std::thread;
-// use types_constants::*;
-// use foodburg::foodburg::*;
-// use geography::draw_utils;
+pub mod maze;
+mod run;
+pub mod simulation;
+pub mod utils;
+extern crate rand;
 
 // thread_local!(
 //     static GLOBAL: RefCell<Option<ApplicationWindow>> = RefCell::new(None);
 // );
 
-// fn check_update_display() {
-//     GLOBAL.with(|global| {
-//         if let Some(win) = &*global.borrow() {
-//             win.queue_draw();
-//         }
-//     })
-// }
-
 fn main() {
-    println!("Project undergoing surgery, check back soon")
+    run::run();
 }
 
 // fn main() {

@@ -1,9 +1,12 @@
 #![allow(dead_code)]
-
+use super::*;
 use std::fmt::Display;
 
+pub mod types {
+    pub use super::{Cardinal, Compass, Direction};
+}
 
-pub trait Direction: Clone + Copy + Display + From<usize> + PartialEq + Eq{
+pub trait Direction: Clone + Copy + Display + From<usize> + PartialEq + Eq {
     fn step(&self) -> (i32, i32);
     fn left(&self) -> Self;
     fn right(&self) -> Self;
@@ -51,14 +54,14 @@ impl Direction for Compass {
     fn step(&self) -> (i32, i32) {
         use self::Compass::*;
         match self {
-            N => (0, -1),
-            NE => (1, -1),
-            E => (1, 0),
-            SE => (1, 1),
-            S => (0, 1),
-            SW => (-1, 1),
-            W => (-1, 0),
-            NW => (-1, -1),
+            N => Neighborhood::local().n,
+            NE => Neighborhood::local().ne,
+            E => Neighborhood::local().e,
+            SE => Neighborhood::local().se,
+            S => Neighborhood::local().s,
+            SW => Neighborhood::local().sw,
+            W => Neighborhood::local().w,
+            NW => Neighborhood::local().nw,
         }
     }
     fn left(&self) -> Compass {
