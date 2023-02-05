@@ -1,6 +1,7 @@
 [package]
 name = "petersburg"
 version = "0.0.1"
+edition = "2021"
 
 [dependencies]
 itertools = "*"
@@ -14,4 +15,8 @@ once_cell = "*"
 single_value_channel = "*"
 crossbeam = "*"
 priority-queue = "*"
-cairo-rs = {version = "0.15.10", features = ["png"]}
+cairo-rs = {version = "*", features = ["png"]}
+clap = { version = "4.1.4", features = ["derive"] }
+lldb = "*"
+[profile.release]
+debug = true

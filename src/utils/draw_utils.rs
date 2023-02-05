@@ -1,7 +1,6 @@
-extern crate cairo;
-use self::cairo::Context;
 use super::*;
-use geography::*;
+use crate::geography::*;
+use cairo::Context;
 
 pub mod types {
     pub use super::Draw;

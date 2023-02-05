@@ -1,15 +1,10 @@
-#![allow(unused_variables, dead_code, unreachable_code)]
-
 use super::super::*;
-use constants::*;
 use std::sync::{Arc, Mutex};
-use std::thread;
 #[allow(unused_imports)]
-use utils::*;
 
 pub mod types {
-    pub use super::EdgeFoodBurg;
-    pub use super::EdgeFoodConfig;
+    pub use super::ScentConfig;
+    pub use super::Scentburg;
 }
 
 #[derive(Copy, Clone)]
@@ -18,18 +13,24 @@ pub struct ScentSquare {
     pub home: usize,
     pub stuck: bool,
 }
-pub struct EdgeFoodBurg {
+pub struct Scentburg {
     size: usize,
     grid: Arc<Mutex<WrappedGrid<ScentSquare>>>,
     draw_grid: Arc<Mutex<WrappedGrid<Color>>>,
 }
+impl Default for ScentConfig {
+    fn default() -> Self {
+        Self { size: 512 }
+    }
+}
 
-pub struct EdgeFoodConfig {
+#[derive(Copy, Clone, Debug)]
+pub struct ScentConfig {
     pub size: usize,
 }
 
-impl Petersburg for EdgeFoodBurg {
-    type Config = EdgeFoodConfig;
+impl Petersburg for Scentburg {
+    type Config = ScentConfig;
 
     fn new(c: Self::Config) -> Self {
         let empty = ScentSquare {
@@ -39,7 +40,7 @@ impl Petersburg for EdgeFoodBurg {
         };
         let grid: WrappedGrid<ScentSquare> = WrappedGrid::new(c.size, c.size, empty);
         let draw_grid: WrappedGrid<Color> = WrappedGrid::new(c.size, c.size, color::BLACK);
-        EdgeFoodBurg {
+        Scentburg {
             size: c.size,
             grid: Arc::new(Mutex::new(grid)),
             draw_grid: Arc::new(Mutex::new(draw_grid)),
@@ -82,23 +83,13 @@ impl Petersburg for EdgeFoodBurg {
     }
 }
 
-impl EdgeFoodBurg {
+impl Scentburg {
     fn seek(&self, start: Point, time_step: &mut usize) -> Point {
         let mut grid = self.grid.lock().unwrap();
         let mut dir = Compass::rand();
         let mut p = start;
         let mut homesickness = self.size * self.size;
-        let color = (
-            rand::random::<f64>(),
-            rand::random::<f64>(),
-            rand::random::<f64>(),
-        );
         'seek_food: loop {
-            // if !grid[x][y].stuck {
-            //     let mut draw_grid = draw_mut.lock().unwrap();
-            //     draw_grid[x][y] = color;
-            //     drop(draw_grid)
-            // };
             homesickness = homesickness - 1;
             *time_step = *time_step + 1;
             if p.0 == 0 || p.1 == 0 || p.0 == self.size - 1 || p.1 == self.size - 1 {
@@ -124,11 +115,6 @@ impl EdgeFoodBurg {
             p = grid.step(p, dir);
         }
         'seek_home: loop {
-            // if !grid[x][y].stuck {
-            //     let mut draw_grid = draw_mut.lock().unwrap();
-            //     draw_grid[x][y] = color;
-            //     drop(draw_grid)
-            // };
             *time_step = *time_step + 1;
             let hood = grid.get_neighborhood(p);
             for neighbor in hood {
@@ -173,39 +159,5 @@ impl EdgeFoodBurg {
             }
         }
         p
-    }
-
-    //fn steveburg(tx : Sender<Message>){
-    pub fn steveburg(&mut self) {
-        loop {
-            thread::sleep(time::A_SECOND);
-        }
-        // let mut max = 0;
-        // let mut min = usize::MAX;
-        // for i in 0..self.size {
-        //     for j in 0..self.size {
-        //         if grid[i][j].home > max {
-        //             max = grid[i][j].home
-        //         }
-        //         if grid[i][j].home != 0 && grid[i][j].home < min {
-        //             min = grid[i][j].home
-        //         }
-        //     }
-        // }
-        // let range = max - min;
-        // println!("Heat range is {}", range);
-        // {
-        //     let mut draw_grid = draw_grid_mut.lock().unwrap();
-        //     for i in 0..self.size {
-        //         for j in 0..self.size {
-        //             if grid[i][j].home != 0 {
-        //                 draw_grid[i][j] = heat_to_color(grid[i][j].home - min, range);
-        //             }
-        //             // tx.send((i, j, heat_to_color(grid[i][j].home, max))).unwrap();
-        //         }
-        //     }
-        //     drop(draw_grid);
-        // }
-        // println!("ALl dropped?");
     }
 }

@@ -1,39 +1,53 @@
+use super::*;
 use crate::geography::{wrapped::*, Cardinal::*, *};
 use crate::utils::*;
+
+#[derive(Debug)]
 pub struct Maze {
-    pub(super) height: usize,
-    pub(super) width: usize,
+    pub(super) num_squares: usize,
     pub(super) vbars: Vec<Vec<bool>>,
     pub(super) hbars: Vec<Vec<bool>>,
-    pub(super) wrap: bool,
+    pub(super) wrapped: bool,
     pub(super) scale: usize,
 }
 
+/**
+ * So the issue is that maze needs to no how many squares it has, and for things to work, that needs to be a factor of the total number of squares
+ * Could be done at type level by specifying size of square and number of squares, but that's problematic.
+ * So need a check - here or in sim (here is probably better?)
+ */
 impl Maze {
-    pub fn random(height: usize, width: usize, scale: usize, wrap: bool) -> Self {
-        let mut hbars = vec![vec!(false; width); height];
-        let mut vbars = vec![vec!(false; width); height];
-        for i in 0..width {
-            for j in 0..height {
-                hbars[i][j] = rand::random::<bool>();
-                vbars[i][j] = rand::random::<bool>();
-            }
+    pub fn new(size: usize, wrapped: bool, args: MazeArgs) -> Self {
+        let scale = if size % args.num_squares == 0 {
+            size / args.num_squares
+        } else {
+            panic!(
+                "Maze squares must be an exact fraction of total size: {} % {} = {}",
+                size,
+                args.num_squares,
+                size % args.num_squares
+            )
+        };
+        let hbars = vec![vec!(true; args.num_squares); args.num_squares];
+        let vbars = vec![vec!(true; args.num_squares); args.num_squares];
+        let mut maze = Maze {
+            num_squares: args.num_squares,
+            vbars,
+            hbars,
+            wrapped,
+            scale,
+        };
+        match args.gen_method {
+            args::GenMethod::Pathed => maze.random_pathed(),
+            args::GenMethod::Open => maze.random_open(),
         }
-        Self {
-            height: height,
-            width: width,
-            vbars: vbars,
-            hbars: hbars,
-            wrap: wrap,
-            scale: scale,
-        }
+        maze.remove_walls(args.openness);
+        maze
     }
-    pub fn random_pathed(height: usize, width: usize, scale: usize, wrap: bool) -> Self {
-        let mut hbars = vec![vec!(true; width); height];
-        let mut vbars = vec![vec!(true; width); height];
-        let mut connected = WrappedGrid::new(height, width, false);
+    fn random_pathed(&mut self) {
+        let mut connected = WrappedGrid::new(self.num_squares, self.num_squares, false);
         connected.set(connected.rand(), true);
-        let mut num_to_connect = height * width - 1;
+        let mut num_to_connect = self.num_squares * self.num_squares - 1;
         'connect: loop {
             if num_to_connect == 0 {
                 break 'connect;
@@ -49,11 +63,11 @@ impl Maze {
                 let dir = all_dirs
                     .iter()
                     .filter(|dir| {
-                        (wrap
+                        (self.wrapped
                             || (x != 0 || **dir != W)
-                                && (x != width - 1 || **dir != E)
+                                && (x != self.num_squares - 1 || **dir != E)
                                 && (y != 0 || **dir != N)
-                                && (y != height - 1 || **dir != S))
+                                && (y != self.num_squares - 1 || **dir != S))
                             && !connected.get(connected.step(p, **dir))
                     })
                     .choose(&mut rand::thread_rng());
@@ -65,55 +79,45 @@ impl Maze {
                         num_to_connect = num_to_connect - 1;
 
                         match dir_for_realsies {
-                            N => hbars[x][y] = false,
-                            S => hbars[neighbor.0][neighbor.1] = false,
-                            W => vbars[x][y] = false,
-                            E => vbars[neighbor.0][neighbor.1] = false,
+                            N => self.hbars[x][y] = false,
+                            S => self.hbars[neighbor.0][neighbor.1] = false,
+                            W => self.vbars[x][y] = false,
+                            E => self.vbars[neighbor.0][neighbor.1] = false,
                         }
                         p = neighbor;
                     }
                 }
             }
         }
-        Self {
-            height: height,
-            width: width,
-            vbars: vbars,
-            hbars: hbars,
-            wrap: wrap,
-            scale: scale,
-        }
     }
-    pub fn random_open(height: usize, width: usize, scale: usize, wrap: bool) -> Self {
-        let mut hbars = vec![vec!(true; width); height];
-        let mut vbars = vec![vec!(true; width); height];
-        let mut connected = WrappedGrid::new(height, width, false);
-        let mut num_to_connect = height * width - 1;
+    fn random_open(&mut self) {
+        let mut connected = WrappedGrid::new(self.num_squares, self.num_squares, false);
+        let mut num_to_connect = self.num_squares * self.num_squares - 1;
         connected.set(Point(0, 0), true);
         'connect: loop {
             //println!("Still in the loop");
             if num_to_connect == 0 {
                 break 'connect;
             }
-            let x = roll::usize(width);
-            let y = roll::usize(height);
+            let x = roll::usize(self.num_squares);
+            let y = roll::usize(self.num_squares);
             if roll::bool() {
-                if !wrap && y == 0 {
+                if !self.wrapped && y == 0 {
                     continue 'connect;
                 }
-                if hbars[x][y] == true {
+                if self.hbars[x][y] == true {
                     let below = Point(x, y);
                     let above = connected.step(below, Cardinal::N);
                     if connected.get(below) ^ connected.get(above) {
                         num_to_connect = num_to_connect - 1;
                         connected.set(above, true);
                         connected.set(below, true);
-                        hbars[x][y] = false;
+                        self.hbars[x][y] = false;
                     }
                 }
             } else {
-                if vbars[x][y] == true {
-                    if !wrap && x == 0 {
+                if self.vbars[x][y] == true {
+                    if !self.wrapped && x == 0 {
                         continue 'connect;
                     }
                     let right = Point(x, y);
@@ -122,27 +126,19 @@ impl Maze {
                         num_to_connect = num_to_connect - 1;
                         connected.set(right, true);
                         connected.set(left, true);
-                        vbars[x][y] = false;
+                        self.vbars[x][y] = false;
                     }
                 }
             }
         }
-        Self {
-            height: height,
-            width: width,
-            vbars: vbars,
-            hbars: hbars,
-            wrap: wrap,
-            scale: scale,
-        }
     }
-    pub fn remove_walls(&mut self, factor: f64) {
-        for i in 0..self.width {
-            for j in 0..self.height {
-                if roll::under(factor) && (self.wrap || j != 0) {
+    fn remove_walls(&mut self, factor: f64) {
+        for i in 0..self.num_squares {
+            for j in 0..self.num_squares {
+                if roll::under(factor) && (self.wrapped || j != 0) {
                     self.hbars[i][j] = false
                 };
-                if roll::under(factor) && (self.wrap || i != 0) {
+                if roll::under(factor) && (self.wrapped || i != 0) {
                     self.vbars[i][j] = false;
                 };
             }
@@ -162,8 +158,8 @@ impl Maze {
         } else {
             self.vbars[x / scale][y / scale]
                 || self.hbars[x / scale][y / scale]
-                || self.hbars[modulo((x / scale) as i32 - 1, self.width)][y / scale]
-                || self.vbars[x / scale][modulo((y / scale) as i32 - 1, self.height)]
+                || self.hbars[modulo((x / scale) as i32 - 1, self.num_squares)][y / scale]
+                || self.vbars[x / scale][modulo((y / scale) as i32 - 1, self.num_squares)]
         }
     }
 }

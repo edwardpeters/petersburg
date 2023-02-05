@@ -1,52 +1,65 @@
-extern crate gtk;
+use crate::burgs::*;
+use crate::simulation::*;
 
-use self::gtk::prelude::*;
-use self::gtk::{Application, ApplicationWindow, DrawingArea};
-use burgs::*;
-use geography::*;
-use simulation::Petersburg;
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, DrawingArea};
 use std::sync::Arc;
 use std::thread;
 use std::time;
 
-fn check_update_display(win: &ApplicationWindow) {
-    win.queue_draw();
+use clap::*;
+
+#[derive(Parser, Debug, Copy, Clone)]
+struct Cli {
+    #[command(subcommand)]
+    simulation: Simulation,
+}
+
+#[derive(Subcommand, Debug, Copy, Clone)]
+enum Simulation {
+    Dimburg(DimburgArgs),
+    Foodburg(FoodburgArgs),
+    // Mazeburg(MazeburgArgs),
+    // Scentburg,
+    Simpleburg(SimpleArgs),
 }
 
 pub fn run() {
-    let p: Point = Point(0, 2);
+    let cli = Cli::parse();
 
-    // let config = MazeburgConfig {
-    //     threads: 16,
-    //     size: 2048,
-    //     squares: 16,
-    //     species_count: 6,
-    //     wrapped: false,
-    //     openness: 0.02,
-    //     show_lines: false,
-    // };
-    // let simulation = Mazeburg::new(config);
-
-    let config = FoodConfig {
-        threads: 16,
-        size: 1024,
-        maze_squares: 16,
-        num_species: 8,
-        openness: 0.05,
-        wrapped: false,
-    };
-    let simulation = Foodburg::new(config);
-
-    // let config = ();
-    // let simulation = Simple::new(config);
-
-    // let config = EdgeFoodConfig { size: 512 };
-    // let simulation = EdgeFoodBurg::new(config);
-
+    match cli.simulation {
+        Simulation::Dimburg(args) => {
+            let sim = Dimburg::new(args);
+            run_helper(sim);
+        }
+        Simulation::Foodburg (args
+         ) => {
+            let sim = Foodburg::new(args);
+            run_helper(sim)
+        }
+        Simulation::Simpleburg (args
+         ) => {
+            let sim = Simpleburg::new(args);
+            run_helper(sim)
+        }
+        // Simulation::Mazeburg (args
+        //  ) => {
+        //     let sim = Mazeburg::new(args);
+        //     run_helper(sim)
+        // }
+        // Simulation::Foodburg => run_picker::<Foodburg>(),
+        // Simulation::Mazeburg => run_picker::<Mazeburg>(),
+        // Simulation::Scentburg => run_picker::<Scentburg>(),
+        // Simulation::Simpleburg { config } => run_with_config::<Simpleburg>(config),
+    }
+}
+fn run_helper<T: Petersburg>(simulation: T) {
+    //let simulation = T::new(config);
     let simulation_run = Arc::new(simulation);
     let simulation_draw = Arc::clone(&simulation_run);
 
     thread::spawn(move || {
+        //println!("Don't run!");
         simulation_run.run();
     });
     let app = Application::builder()
@@ -61,7 +74,6 @@ pub fn run() {
         simulation_draw.draw(context);
         Inhibit(false)
     });
-
     app.connect_activate(move |app| {
         let win = ApplicationWindow::builder()
             .application(app)
@@ -71,11 +83,15 @@ pub fn run() {
             .build();
         win.add(&draw_area);
         win.show_all();
-
         glib::timeout_add_local(time::Duration::from_millis(500), move || {
             check_update_display(&win);
             Continue(true)
         });
     });
-    app.run();/*  */
+    let empty: Vec<String> = vec![];
+    app.run_with_args(&empty);
+}
+
+fn check_update_display(win: &ApplicationWindow) {
+    win.queue_draw();
 }

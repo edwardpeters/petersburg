@@ -1,6 +1,8 @@
-use super::super::super::*;
-use super::super::*;
-use crate::utils::*;
+#[allow(unused_imports)]
+use super::{
+    super::{super::*, *},
+    *,
+};
 
 pub struct WrappedGrid<T: Copy> {
     pub(super) height: usize,
@@ -32,9 +34,6 @@ impl<T: Copy> Grid<T> for WrappedGrid<T> {
         let (x, y) = (pt.0 as i32, pt.1 as i32);
         let (xs, ys) = dir.step();
         let result = Point(modulo(x + xs, self.width), modulo(y + ys, self.height));
-        // if x + xs < 0 || y + ys < 0 {
-        //     println!("{pt} stepped in {dir} for result {result}")
-        // };
         result
     }
     #[inline(always)]

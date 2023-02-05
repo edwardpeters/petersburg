@@ -1,15 +1,10 @@
-use maze::*;
+use super::{super::*, *};
+use crate::maze::*;
+use cairo::Context;
 use std::collections::BinaryHeap;
 use std::sync::Mutex;
-extern crate cairo;
-use self::cairo::Context;
-#[allow(unused_imports)]
-use simulation::*;
-
-use super::*;
 
 pub mod types {
-    pub use super::FoodConfig;
     pub use super::Foodburg;
 }
 
@@ -72,7 +67,7 @@ enum GrowResult {
 }
 
 pub struct Foodburg {
-    threads: usize,
+    num_threads: usize,
     size: usize,
     grid: RwGrid<Square>,
     species: Vec<Species>,
@@ -80,34 +75,10 @@ pub struct Foodburg {
     draw_path: Mutex<Option<SpeciesID>>,
     path: Mutex<Option<Vec<(Point, Color)>>>,
 }
-#[derive(Copy, Clone)]
-pub struct FoodConfig {
-    pub threads: usize,
-    pub size: usize,
-    pub maze_squares: usize,
-    pub num_species: usize,
-    pub openness: f64,
-    pub wrapped: bool,
-}
 impl Petersburg for Foodburg {
-    type Config = FoodConfig;
-    fn new(c: FoodConfig) -> Self {
-        let grid = Self::grid_init(&c);
-        let species = Self::species_init(&c, &grid);
-        let actors = Self::actors_init(&c, &species);
-        Self {
-            threads: c.threads,
-            size: c.size,
-            grid,
-            species,
-            actors,
-            draw_path: Mutex::new(None),
-            path: Mutex::new(None),
-        }
-    }
     fn run(&self) {
         crossbeam::scope(|scope| {
-            for i in 0..self.threads {
+            for i in 0..self.num_threads {
                 scope.spawn(move |_| {
                     self.run_thread(i);
                 });
@@ -138,36 +109,44 @@ impl Petersburg for Foodburg {
     }
 }
 impl Foodburg {
-    fn grid_init(c: &FoodConfig) -> RwGrid<Square> {
-        let grid = RwGrid::<Square>::new(c.size, c.size, Square::Empty);
-        let mut maze = Maze::random_pathed(
-            c.maze_squares,
-            c.maze_squares,
-            c.size / c.maze_squares,
-            c.wrapped,
-        );
-        maze.remove_walls(c.openness);
-        for i in 0..c.size {
-            for j in 0..c.size {
+    pub fn new(args: FoodburgArgs) -> Self {
+        let grid = Self::grid_init(args.size, args.maze_args, args.wrapped);
+        let species = Self::species_init(args.num_species, &grid);
+        let actors = Self::actors_init(&species);
+        Self {
+            num_threads: args.num_threads,
+            size: args.size,
+            grid,
+            species,
+            actors,
+            draw_path: Mutex::new(None),
+            path: Mutex::new(None),
+        }
+    }
+    fn grid_init(size: usize, maze_args: MazeArgs, wrapped: bool) -> RwGrid<Square> {
+        let grid = RwGrid::<Square>::new(size, size, Square::Empty);
+        let maze = Maze::new(size, wrapped, maze_args);
+        for i in 0..size {
+            for j in 0..size {
                 let p = Point(i, j);
                 grid.set_if(p, |_| maze.is_wall(p), Square::Wall);
             }
         }
-        if !c.wrapped {
-            for i in 0..c.size {
-                let redge = Point(c.size - 1, i);
-                let bedge = Point(i, c.size - 1);
+        if !wrapped {
+            for i in 0..size {
+                let redge = Point(size - 1, i);
+                let bedge = Point(i, size - 1);
                 grid.set_if(redge, |_| true, Square::Wall);
                 grid.set_if(bedge, |_| true, Square::Wall);
             }
         }
         grid
     }
-    fn species_init(c: &FoodConfig, grid: &RwGrid<Square>) -> Vec<Species> {
-        if c.num_species > MOLD_COLORS.len() {
+    fn species_init(num_species: usize, grid: &RwGrid<Square>) -> Vec<Species> {
+        if num_species > MOLD_COLORS.len() {
             panic!("More colors required for that many species")
         }
-        let species = (0..c.num_species)
+        let species = (0..num_species)
             .map(|s| {
                 let mut p;
                 'find_start: loop {
@@ -191,11 +170,11 @@ impl Foodburg {
             .collect();
         species
     }
-    fn actors_init(c: &FoodConfig, species: &Vec<Species>) -> Mutex<BinaryHeap<Actor>> {
-        //panic!("Unimplemented actors_int")
+    fn actors_init(species: &Vec<Species>) -> Mutex<BinaryHeap<Actor>> {
+        let num_species = species.len();
         let mut queue = BinaryHeap::new();
         queue.push(Actor::FoodSpawn { time: 0 });
-        for s in 0..c.num_species {
+        for s in 0..num_species {
             queue.push(Actor::SporeSpawn {
                 s,
                 p: species[s].root,
@@ -228,7 +207,6 @@ impl Foodburg {
                     drop(queued_count);
                     drop(active_count);
                     drop(actors);
-                    //println!("Okay so that is goddamn weird wtf");
 
                     let result = self.attempt_grow(spawn_p, s);
 
@@ -239,7 +217,9 @@ impl Foodburg {
 
                     match result {
                         GrowResult::SpawnDied => {
-                            //println!("Spawn died - this indicates (safely handled) thread collision.");
+                            println!(
+                                "Spawn died - this indicates (safely handled) thread collision."
+                            );
                             actors.push(SporeSpawn {
                                 s,
                                 p: self.species[s].root,
@@ -285,7 +265,8 @@ impl Foodburg {
                                     drop(actors);
                                 }
                             } else {
-                                println!("{} from {spawn_p}, landed on {p}. Attempted growth on non-empty square. Oh well.", self.species[s]);
+                                println!("{} from {spawn_p}, landed on {p}. Attempted growth on non-empty square after {lifetime} steps. Oh well.", self.species[s]);
+                                println!("(BTW, the queue count is {queued_count} and this is thread {thread_id}");
                                 actors.push(SporeSpawn {
                                     s,
                                     p: self.species[s].root,
@@ -307,8 +288,8 @@ impl Foodburg {
             }
         }
     }
+    #[allow(dead_code, unused_mut)]
     fn attempt_grow_pathed(&self, spawn_point: Point, s: SpeciesID) -> GrowResult {
-        println!("Starting off");
         let (mut p, s) = match self.rand_descendent_leaf(spawn_point, s) {
             Some(start_p) => match self.grid.get(start_p) {
                 Square::Mold { s, .. } => (start_p, s),
@@ -479,14 +460,17 @@ impl Foodburg {
         //Move
     }
     #[allow(unused)]
-    fn rand_pathed_descendent(&self, p: Point, s: SpeciesID) -> Option<Point> {
+    fn rand_pathed_descendent(&self, p: Point, s: SpeciesID, depth: usize) -> Option<Point> {
         use rand::seq::SliceRandom;
+        if depth > 50 {
+            println!("Searching at depth {depth}")
+        }
         match self.grid.get(p) {
             Square::Mold { s: found_s, .. } if s == found_s => {
                 let points_and_times: Vec<(Point, usize)> = self.get_children(p, s);
                 let random_child = points_and_times.choose(&mut rand::thread_rng());
                 random_child
-                    .and_then(|pair| self.rand_pathed_descendent(pair.0, s))
+                    .and_then(|pair| self.rand_pathed_descendent(pair.0, s, depth + 1))
                     .or(Some(p))
             }
             _ => None,
@@ -495,7 +479,7 @@ impl Foodburg {
     #[allow(unused)]
     fn rand_descendent_leaf(&self, p: Point, s: SpeciesID) -> Option<Point> {
         use rand::seq::SliceRandom;
-        self.get_descendant_leaves(p, s)
+        self.get_descendant_leaves(p, s, 0)
             .choose(&mut rand::thread_rng())
             .map(|pair| pair.0)
     }
@@ -535,7 +519,9 @@ impl Foodburg {
             _ => Vec::new(),
         }
     }
-    fn get_descendant_leaves(&self, p: Point, s: SpeciesID) -> Vec<(Point, usize)> {
+    //We have our culprit!
+    fn get_descendant_leaves(&self, p: Point, s: SpeciesID, depth: usize) -> Vec<(Point, usize)> {
+        
         match self.grid.get(p) {
             Square::Mold {
                 s: found_s,
@@ -548,7 +534,7 @@ impl Foodburg {
                 } else {
                     children
                         .iter()
-                        .map(|child_p| self.get_descendant_leaves(child_p.0, s))
+                        .map(|child_p| self.get_descendant_leaves(child_p.0, s, depth + 1))
                         .flatten()
                         .collect()
                 }

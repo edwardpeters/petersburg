@@ -8,14 +8,32 @@ use std::sync::RwLock;
 //These are consts because they're really for perf tuning, and they're here because their efficacy is impl-specific.
 pub(super) const REGIONS_PER_DIMENSION: usize = 8;
 pub(super) const TOTAL_REGIONS: usize = REGIONS_PER_DIMENSION * REGIONS_PER_DIMENSION;
-pub struct RwGrid<T> {
+pub struct RegionalGrid<T> {
     pub(super) width: usize,
     pub(super) height: usize,
     pub(super) region_size: usize,
     pub(super) regions: [RwLock<Vec<T>>; TOTAL_REGIONS],
 }
 
-impl<T: Copy> Grid<T> for RwGrid<T> {
+// impl<T: Copy> Index<Point> for RegionalGrid<T> {
+//     type Output = T;
+
+//     fn index(&self, index: Point) -> &Self::Output {
+//         let (region_index, index_in_region) = self.map_coordinates(index);
+//         let region = self.regions[region_index].read().unwrap();
+//         &region[index_in_region]
+//     }
+// }
+// impl<T: Copy> IndexMut<Point> for RegionalGrid<T> {
+//     fn index_mut(&mut self, index: Point) -> &mut Self::Output {
+//         let (region_index, index_in_region) = self.map_coordinates(index);
+//         let mut region = self.regions[region_index].write().unwrap();
+//         region.
+//         &mut region[index_in_region]
+//     }
+// }
+
+impl<T: Copy> Grid<T> for RegionalGrid<T> {
     fn step<D: Direction>(&self, pt: Point, dir: D) -> Point {
         let (x, y) = (pt.0 as i32, pt.1 as i32);
         let (xs, ys) = dir.step();
@@ -67,7 +85,7 @@ impl<T: Copy> Grid<T> for RwGrid<T> {
     }
 }
 
-impl<T: Copy> ThreadedGrid<T> for RwGrid<T> {
+impl<T: Copy> ThreadedGrid<T> for RegionalGrid<T> {
     fn set_if<F>(&self, p: Point, f: F, value: T) -> bool
     where
         F: Fn(T) -> bool,
@@ -120,7 +138,7 @@ impl<T: Copy> ThreadedGrid<T> for RwGrid<T> {
         // }
     }
 }
-impl<T: Copy> RwGrid<T> {
+impl<T: Copy> RegionalGrid<T> {
     // fn locked_hood(&self, p : Point) -> (Neighborhood<T>, HashSet<RwLockWriteGuard<T>>){
 
     // }
@@ -140,7 +158,7 @@ impl<T: Copy> RwGrid<T> {
         };
         let region_size = height * width / TOTAL_REGIONS;
         let regions = [0; TOTAL_REGIONS].map(|_| RwLock::new(vec![default; region_size]));
-        RwGrid {
+        RegionalGrid {
             width,
             height,
             region_size,

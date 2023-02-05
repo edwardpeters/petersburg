@@ -1,5 +1,5 @@
-use utils::*;
-
+#[allow(unused_imports)]
+use super::{super::*, *};
 pub const EMPTY: Square = Square {
     species: usize::MAX,
 };

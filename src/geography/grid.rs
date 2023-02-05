@@ -6,8 +6,8 @@ pub use self::point::Point;
 pub mod grid;
 pub use self::grid::types::*;
 
-pub mod region_locked;
-pub use self::region_locked::*;
+pub mod regional;
+pub use self::regional::*;
 pub mod rw;
 pub use self::rw::*;
 pub mod wrapped;

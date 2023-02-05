@@ -1,6 +1,5 @@
-extern crate crossbeam;
-
 //Organization reasoning: I like relatively flat structures, following the idiom that functions should be addressed by parent crate, but structs/enums can be addressed directly
+use crate::utils::*;
 
 pub mod local;
 pub use self::local::*;

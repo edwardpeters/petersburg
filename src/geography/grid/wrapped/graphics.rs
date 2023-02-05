@@ -1,7 +1,9 @@
-extern crate cairo;
-use self::cairo::*;
-use super::*;
-use utils::*;
+#[allow(unused_imports)]
+use super::{
+    super::{super::*, *},
+    *,
+};
+use cairo::*;
 
 impl<T: Copy + Colored> Draw for WrappedGrid<T> {
     fn draw(&self, context: &Context) {

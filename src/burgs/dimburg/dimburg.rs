@@ -1,16 +1,19 @@
 use crate::simulation::*; //I'd rather this be simulation::*
 use crate::utils::*;
+use clap::Args;
 use std::{thread, time};
 
 pub mod types {
-    pub use super::DimConfig;
-    pub use super::Dimburg;
+    pub use super::{Dimburg, DimburgArgs};
 }
 
-pub struct DimConfig {
+#[derive(Args, Debug, Copy, Clone)]
+pub struct DimburgArgs {
+    #[arg(long, short, default_value_t = 3)]
     pub size: usize,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct Dimburg {
     pub size: usize,
     pub words: &'static str,
@@ -18,16 +21,6 @@ pub struct Dimburg {
 }
 
 impl Petersburg for Dimburg {
-    type Config = DimConfig;
-
-    fn new(c: Self::Config) -> Self {
-        Self {
-            size: c.size,
-            words: "I'd buy that for a dollar",
-            color: color::BLUE,
-        }
-    }
-
     fn run(&self) {
         crossbeam::scope(|scope| {
             for i in 0..3 {
@@ -48,6 +41,14 @@ impl Petersburg for Dimburg {
 }
 
 impl Dimburg {
+    pub fn new(args: DimburgArgs) -> Self {
+        Self {
+            size: args.size,
+            words: "I'd buy that for a dollar",
+            color: color::BLUE,
+        }
+    }
+
     fn run_thread(&self, i: i32) {
         loop {
             println!("Run thread {} says : {}", i, self.words);

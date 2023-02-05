@@ -1,12 +1,12 @@
-extern crate cairo;
-use self::cairo::Context;
 use super::super::*;
 use super::*;
-use genes::*;
-use maze::*;
+#[allow(unused_imports)]
+use super::{super::*, *};
+use crate::genes::*;
+use crate::maze::*;
+use cairo::Context;
 use std::fmt;
 use std::sync::{Arc, Mutex, RwLock};
-use utils::*;
 
 type MoveDir = Compass;
 type BuildDir = Compass;
@@ -22,18 +22,6 @@ const NORMAL_STEPS: usize = 10;
 
 pub mod types {
     pub use super::Mazeburg;
-    pub use super::MazeburgConfig;
-}
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct MazeburgConfig {
-    pub threads: usize,
-    pub size: usize,
-    pub squares: usize,
-    pub species_count: usize,
-    pub wrapped: bool,
-    pub openness: f64,
-    pub show_lines: bool,
 }
 
 struct Species {
@@ -67,7 +55,7 @@ enum Result {
 }
 
 pub struct Mazeburg {
-    config: MazeburgConfig,
+    args: MazeburgArgs,
     maze: Arc<Maze>,
     grid_rw: Arc<RwLock<RwGrid<Square>>>,
     draw_path_m: Arc<Mutex<(Color, Vec<Point>)>>,
@@ -77,54 +65,9 @@ pub struct Mazeburg {
 }
 
 impl Petersburg for Mazeburg {
-    type Config = MazeburgConfig;
-    fn new(c: MazeburgConfig) -> Self {
-        let MazeburgConfig {
-            size,
-            squares,
-            species_count,
-            wrapped,
-            openness,
-            show_lines,
-            ..
-        } = c;
-        if size % squares != 0 {
-            panic!(
-                "Maze must be an exact fit: {size}%{squares} == {}",
-                size % squares
-            )
-        }
-        let mut maze_raw = Maze::random_pathed(squares, squares, size / squares, wrapped);
-        maze_raw.remove_walls(openness);
-        let mut grid: RwGrid<Square> = RwGrid::new(size, size, square::EMPTY);
-        let min_distance = (size as f64
-            * if wrapped {
-                MIN_DISTANCE_WRAPPED
-            } else {
-                MIN_DISTANCE_UNWRAPPED
-            }) as usize;
-        let line_params_m = Arc::new(Mutex::new((show_lines, None)));
-        let species = (0..species_count)
-            .map(|i| Self::species_init(c, i, &mut grid, &maze_raw, min_distance))
-            .collect::<Vec<Species>>();
-        let species_m = Arc::new(Mutex::new(species));
-        let grid_rw = Arc::new(RwLock::new(grid));
-        let maze = Arc::new(maze_raw);
-        let draw_path_m = Arc::new(Mutex::new((color::BLACK, Vec::new())));
-        let max_age = size * 200;
-        Self {
-            config: c,
-            maze,
-            grid_rw,
-            draw_path_m,
-            species_m,
-            draw_line_params: line_params_m,
-            max_age,
-        }
-    }
     fn run(&self) {
         crossbeam::scope(|scope| {
-            for i in 0..self.config.threads {
+            for i in 0..self.args.threads {
                 scope.spawn(move |_| {
                     self.run_thread(i);
                 });
@@ -137,7 +80,7 @@ impl Petersburg for Mazeburg {
     }
     fn draw(&self, context: &Context) {
         self.maze.draw(context);
-        let size = self.config.size;
+        let size = self.args.size;
         self.grid_rw.read().unwrap().draw(context);
         let path_params = self.draw_line_params.lock().unwrap();
         let draw_path = path_params.0;
@@ -150,7 +93,35 @@ impl Petersburg for Mazeburg {
 }
 
 impl Mazeburg {
-
+    pub fn new(args: MazeburgArgs) -> Self {
+        let mut maze_raw = Maze::random_pathed(args.size, args.maze_args, args.wrapped);
+        maze_raw.remove_walls(openness);
+        let mut grid: RwGrid<Square> = RwGrid::new(size, size, square::EMPTY);
+        let min_distance = (size as f64
+            * if wrapped {
+                MIN_DISTANCE_WRAPPED
+            } else {
+                MIN_DISTANCE_UNWRAPPED
+            }) as usize;
+        let line_params_m = Arc::new(Mutex::new((show_lines, None)));
+        let species = (0..num_species)
+            .map(|i| Self::species_init(c, i, &mut grid, &maze_raw, min_distance))
+            .collect::<Vec<Species>>();
+        let species_m = Arc::new(Mutex::new(species));
+        let grid_rw = Arc::new(RwLock::new(grid));
+        let maze = Arc::new(maze_raw);
+        let draw_path_m = Arc::new(Mutex::new((color::BLACK, Vec::new())));
+        let max_age = size * 200;
+        Self {
+            args,
+            maze,
+            grid_rw,
+            draw_path_m,
+            species_m,
+            draw_line_params: line_params_m,
+            max_age,
+        }
+    }
     fn run_thread(&self, _thread_index: usize) {
         'main: loop {
             let mut species = self.species_m.lock().unwrap();
@@ -233,7 +204,7 @@ impl Mazeburg {
         }
     }
     fn species_init(
-        config: <Mazeburg as Petersburg>::Config,
+        args: MazeburgArgs,
         index: usize,
         grid: &mut RwGrid<Square>,
         maze: &Maze,
@@ -241,7 +212,7 @@ impl Mazeburg {
     ) -> Species {
         let mut destination;
         let mut origin;
-        let (size, wrapped) = (config.size, config.wrapped);
+        let (size, wrapped) = (args.size, args.wrapped);
         loop {
             destination = match roll::usize(4) {
                 0 => Point(roll::usize(size), roll::usize(size / 8) + 7 * size / 8),

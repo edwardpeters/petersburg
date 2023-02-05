@@ -1,0 +1,9 @@
+Generalize threading:
+    Make crossbeam, thread counting logic ubiquitous
+Revisit configs
+    (Assuming a first pass is done) : Look to generalize and improve
+Performance!
+    New generalizeable sim - mazed but otherwise simple
+    Configurable backing grid!
+    learn how to test locking behavior
+    

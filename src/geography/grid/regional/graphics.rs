@@ -1,8 +1,8 @@
-use super::rw_grid::*;
+use super::regional_grid::*;
 use crate::utils::{color, color::types::*, draw_utils::Draw};
 use cairo::Context;
 
-impl<T: Colored + Copy> Draw for RwGrid<T> {
+impl<T: Colored + Copy> Draw for RegionalGrid<T> {
     fn draw(&self, context: &Context) {
         let (region_width, region_height) = (
             self.width / REGIONS_PER_DIMENSION,

@@ -8,11 +8,6 @@ pub mod maze;
 mod run;
 pub mod simulation;
 pub mod utils;
-extern crate rand;
-
-// thread_local!(
-//     static GLOBAL: RefCell<Option<ApplicationWindow>> = RefCell::new(None);
-// );
 
 fn main() {
     run::run();
