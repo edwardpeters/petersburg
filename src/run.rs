@@ -17,10 +17,10 @@ struct Cli {
 
 #[derive(Subcommand, Debug, Copy, Clone)]
 enum Simulation {
-    Dimburg(DimburgArgs),
+    Unburg(UnburgArgs),
     Foodburg(FoodburgArgs),
-    // Mazeburg(MazeburgArgs),
-    // Scentburg,
+    Mazeburg(MazeburgArgs),
+    Scentburg(ScentburgArgs),
     Simpleburg(SimpleArgs),
 }
 
@@ -28,38 +28,33 @@ pub fn run() {
     let cli = Cli::parse();
 
     match cli.simulation {
-        Simulation::Dimburg(args) => {
-            let sim = Dimburg::new(args);
+        Simulation::Unburg(args) => {
+            let sim = Unburg::new(args);
             run_helper(sim);
         }
-        Simulation::Foodburg (args
-         ) => {
+        Simulation::Foodburg(args) => {
             let sim = Foodburg::new(args);
             run_helper(sim)
         }
-        Simulation::Simpleburg (args
-         ) => {
+        Simulation::Simpleburg(args) => {
             let sim = Simpleburg::new(args);
             run_helper(sim)
         }
-        // Simulation::Mazeburg (args
-        //  ) => {
-        //     let sim = Mazeburg::new(args);
-        //     run_helper(sim)
-        // }
-        // Simulation::Foodburg => run_picker::<Foodburg>(),
-        // Simulation::Mazeburg => run_picker::<Mazeburg>(),
-        // Simulation::Scentburg => run_picker::<Scentburg>(),
-        // Simulation::Simpleburg { config } => run_with_config::<Simpleburg>(config),
+        Simulation::Mazeburg(args) => {
+            let sim = Mazeburg::new(args);
+            run_helper(sim)
+        }
+        Simulation::Scentburg(args) => {
+            let sim = Scentburg::new(args);
+            run_helper(sim)
+        }
     }
 }
 fn run_helper<T: Petersburg>(simulation: T) {
-    //let simulation = T::new(config);
     let simulation_run = Arc::new(simulation);
     let simulation_draw = Arc::clone(&simulation_run);
 
     thread::spawn(move || {
-        //println!("Don't run!");
         simulation_run.run();
     });
     let app = Application::builder()

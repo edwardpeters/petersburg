@@ -408,8 +408,6 @@ impl Foodburg {
             self.bounce_move(&mut p, &mut dir);
         }
 
-        // let genes = species.get_genotype();
-        // let steps = genes.get_fenotype();
     }
     fn grow_food(&self) {
         let mut p;
@@ -454,47 +452,12 @@ impl Foodburg {
             Self::update_dir(&mut dir);
             self.bounce_move(&mut p, &mut dir);
         }
-        //Check stuck?
-        //Pick dir
-        //Bounce? | Move
-        //Move
     }
-    #[allow(unused)]
-    fn rand_pathed_descendent(&self, p: Point, s: SpeciesID, depth: usize) -> Option<Point> {
-        use rand::seq::SliceRandom;
-        if depth > 50 {
-            println!("Searching at depth {depth}")
-        }
-        match self.grid.get(p) {
-            Square::Mold { s: found_s, .. } if s == found_s => {
-                let points_and_times: Vec<(Point, usize)> = self.get_children(p, s);
-                let random_child = points_and_times.choose(&mut rand::thread_rng());
-                random_child
-                    .and_then(|pair| self.rand_pathed_descendent(pair.0, s, depth + 1))
-                    .or(Some(p))
-            }
-            _ => None,
-        }
-    }
-    #[allow(unused)]
     fn rand_descendent_leaf(&self, p: Point, s: SpeciesID) -> Option<Point> {
         use rand::seq::SliceRandom;
-        self.get_descendant_leaves(p, s, 0)
+        self.get_descendant_leaves(p, s)
             .choose(&mut rand::thread_rng())
             .map(|pair| pair.0)
-    }
-    #[allow(unused)]
-    fn get_freshest(&self, p: Point, s: SpeciesID) -> Option<Point> {
-        match self.grid.get(p) {
-            Square::Mold { s: found_s, .. } if s == found_s => {
-                let points_and_times: Vec<(Point, usize)> = self.get_children(p, s);
-                let least = points_and_times.iter().min_by(|a, b| a.1.cmp(&b.1));
-                least
-                    .and_then(|pair| self.get_freshest(pair.0, s))
-                    .or(Some(p))
-            }
-            _ => None,
-        }
     }
     fn get_children(&self, p: Point, s: SpeciesID) -> Vec<(Point, usize)> {
         match self.grid.get(p) {
@@ -519,28 +482,30 @@ impl Foodburg {
             _ => Vec::new(),
         }
     }
-    //We have our culprit!
-    fn get_descendant_leaves(&self, p: Point, s: SpeciesID, depth: usize) -> Vec<(Point, usize)> {
-        
-        match self.grid.get(p) {
-            Square::Mold {
-                s: found_s,
-                spawn_time,
-                ..
-            } if s == found_s => {
-                let children = self.get_children(p, s);
-                if children.is_empty() {
-                    vec![(p, spawn_time)]
-                } else {
-                    children
-                        .iter()
-                        .map(|child_p| self.get_descendant_leaves(child_p.0, s, depth + 1))
-                        .flatten()
-                        .collect()
+
+    fn get_descendant_leaves(&self, p: Point, s: SpeciesID) -> Vec<(Point, usize)> {
+        let mut to_process = vec![p];
+        let mut found_leaves: Vec<(Point, usize)> = vec![];
+        while let Some(candidate) = to_process.pop() {
+            match self.grid.get(candidate) {
+                Square::Mold {
+                    s: found_s,
+                    spawn_time,
+                    ..
+                } if s == found_s => {
+                    let children = self.get_children(candidate, s);
+                    if children.is_empty() {
+                        found_leaves.push((candidate, spawn_time))
+                    } else {
+                        children.iter().for_each(|(child_p, _)| {
+                            to_process.push(*child_p);
+                        });
+                    }
                 }
+                _ => {}
             }
-            _ => Vec::new(),
         }
+        found_leaves
     }
 
     fn run_ui(&self) {

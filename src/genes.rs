@@ -84,6 +84,6 @@ impl Display for GenoType {
         for step in self.0.iter() {
             write!(f, "\t{}\n", step)?
         }
-        write!(f, "I guess it needs an end?")
+        write!(f, "")
     }
 }

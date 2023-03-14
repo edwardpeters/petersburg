@@ -95,7 +95,6 @@ impl Maze {
         let mut num_to_connect = self.num_squares * self.num_squares - 1;
         connected.set(Point(0, 0), true);
         'connect: loop {
-            //println!("Still in the loop");
             if num_to_connect == 0 {
                 break 'connect;
             }

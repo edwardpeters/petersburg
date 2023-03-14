@@ -1,10 +1,11 @@
 use super::super::*;
+use clap::*;
 use std::sync::{Arc, Mutex};
 #[allow(unused_imports)]
 
 pub mod types {
-    pub use super::ScentConfig;
     pub use super::Scentburg;
+    pub use super::ScentburgArgs;
 }
 
 #[derive(Copy, Clone)]
@@ -18,35 +19,14 @@ pub struct Scentburg {
     grid: Arc<Mutex<WrappedGrid<ScentSquare>>>,
     draw_grid: Arc<Mutex<WrappedGrid<Color>>>,
 }
-impl Default for ScentConfig {
-    fn default() -> Self {
-        Self { size: 512 }
-    }
-}
 
-#[derive(Copy, Clone, Debug)]
-pub struct ScentConfig {
+#[derive(Args, Copy, Clone, Debug)]
+pub struct ScentburgArgs {
+    #[arg(long, short, default_value_t = 1024)]
     pub size: usize,
 }
 
 impl Petersburg for Scentburg {
-    type Config = ScentConfig;
-
-    fn new(c: Self::Config) -> Self {
-        let empty = ScentSquare {
-            food: 0,
-            home: 0,
-            stuck: false,
-        };
-        let grid: WrappedGrid<ScentSquare> = WrappedGrid::new(c.size, c.size, empty);
-        let draw_grid: WrappedGrid<Color> = WrappedGrid::new(c.size, c.size, color::BLACK);
-        Scentburg {
-            size: c.size,
-            grid: Arc::new(Mutex::new(grid)),
-            draw_grid: Arc::new(Mutex::new(draw_grid)),
-        }
-    }
-
     fn run(&self) {
         let mut successes = 0;
         let center = Point(self.size / 2, self.size / 2);
@@ -66,11 +46,6 @@ impl Petersburg for Scentburg {
             draw_grid.set(start, color::WHITE);
             drop(draw_grid);
             //tx.send(new_point).unwrap();
-            println!(
-                "A particle made its way home in {} steps, sticking at {}",
-                time_step - start_time,
-                start
-            );
             if time_step - start_time < 3 {
                 break;
             };
@@ -84,6 +59,20 @@ impl Petersburg for Scentburg {
 }
 
 impl Scentburg {
+    pub fn new(c: ScentburgArgs) -> Self {
+        let empty = ScentSquare {
+            food: 0,
+            home: 0,
+            stuck: false,
+        };
+        let grid: WrappedGrid<ScentSquare> = WrappedGrid::new(c.size, c.size, empty);
+        let draw_grid: WrappedGrid<Color> = WrappedGrid::new(c.size, c.size, color::BLACK);
+        Scentburg {
+            size: c.size,
+            grid: Arc::new(Mutex::new(grid)),
+            draw_grid: Arc::new(Mutex::new(draw_grid)),
+        }
+    }
     fn seek(&self, start: Point, time_step: &mut usize) -> Point {
         let mut grid = self.grid.lock().unwrap();
         let mut dir = Compass::rand();

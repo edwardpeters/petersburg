@@ -31,7 +31,7 @@ struct Species {
     alive: bool,
     total_time: usize,
     dead_streak: usize,
-    adams: usize,
+    root_ancestors: usize,
     fitness: f64,
     candidates: Vec<GenoType>,
 }
@@ -67,7 +67,7 @@ pub struct Mazeburg {
 impl Petersburg for Mazeburg {
     fn run(&self) {
         crossbeam::scope(|scope| {
-            for i in 0..self.args.threads {
+            for i in 0..self.args.num_threads {
                 scope.spawn(move |_| {
                     self.run_thread(i);
                 });
@@ -94,24 +94,23 @@ impl Petersburg for Mazeburg {
 
 impl Mazeburg {
     pub fn new(args: MazeburgArgs) -> Self {
-        let mut maze_raw = Maze::random_pathed(args.size, args.maze_args, args.wrapped);
-        maze_raw.remove_walls(openness);
-        let mut grid: RwGrid<Square> = RwGrid::new(size, size, square::EMPTY);
-        let min_distance = (size as f64
-            * if wrapped {
+        let maze_raw = Maze::new(args.size, args.wrapped, args.maze_args);
+        let mut grid: RwGrid<Square> = RwGrid::new(args.size, args.size, square::EMPTY);
+        let min_distance = (args.size as f64
+            * if args.wrapped {
                 MIN_DISTANCE_WRAPPED
             } else {
                 MIN_DISTANCE_UNWRAPPED
             }) as usize;
-        let line_params_m = Arc::new(Mutex::new((show_lines, None)));
-        let species = (0..num_species)
-            .map(|i| Self::species_init(c, i, &mut grid, &maze_raw, min_distance))
+        let line_params_m = Arc::new(Mutex::new((args.show_lines, None)));
+        let species = (0..args.num_species)
+            .map(|i| Self::species_init(args, i, &mut grid, &maze_raw, min_distance))
             .collect::<Vec<Species>>();
         let species_m = Arc::new(Mutex::new(species));
         let grid_rw = Arc::new(RwLock::new(grid));
         let maze = Arc::new(maze_raw);
         let draw_path_m = Arc::new(Mutex::new((color::BLACK, Vec::new())));
-        let max_age = size * 200;
+        let max_age = args.size * 200;
         Self {
             args,
             maze,
@@ -137,10 +136,10 @@ impl Mazeburg {
                     break 'main;
                 }
                 Some(ref mut s) => {
-                    let (index, origin, adams) = (s.index, s.origin, s.adams);
+                    let (index, origin, root_ancestors) = (s.index, s.origin, s.root_ancestors);
                     let genes = if s.candidates.is_empty() {
-                        s.adams = s.adams + 1;
-                        GenoType::new(NORMAL_STEPS, format!("{}:{}", index, adams))
+                        s.root_ancestors = s.root_ancestors + 1;
+                        GenoType::new(NORMAL_STEPS, format!("{}:{}", index, root_ancestors))
                     } else {
                         let i = roll::usize(s.candidates.len());
                         s.candidates.swap_remove(i)
@@ -184,7 +183,6 @@ impl Mazeburg {
                                 + this_species.fitness * (FITNESS_HISTORY as f64 - 1.0))
                                 / (FITNESS_HISTORY as f64);
                             let num_children = Self::children_for_fitness(this_species.fitness);
-                            //println!("Success, adding {num_children}");
                             for i in 0..num_children {
                                 this_species.candidates.push(genes.mutate(i));
                             }
@@ -244,7 +242,7 @@ impl Mazeburg {
             alive: true,
             total_time: 0,
             dead_streak: 0,
-            adams: 0,
+            root_ancestors: 0,
             fitness: 0.0,
             candidates: Vec::new(),
         }
@@ -345,12 +343,12 @@ impl Mazeburg {
                     println!(
                         "{elem}:\n
                         \t {} alive
-                        \t {} adams
+                        \t {} root_ancestors
                         \t {} candidates
                         \t {:.5} fitness
                         \t {} deadiness",
                         elem.alive,
-                        elem.adams,
+                        elem.root_ancestors,
                         elem.candidates.len(),
                         elem.fitness,
                         elem.dead_streak

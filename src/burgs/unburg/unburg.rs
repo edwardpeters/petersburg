@@ -4,23 +4,23 @@ use clap::Args;
 use std::{thread, time};
 
 pub mod types {
-    pub use super::{Dimburg, DimburgArgs};
+    pub use super::{Unburg, UnburgArgs};
 }
 
 #[derive(Args, Debug, Copy, Clone)]
-pub struct DimburgArgs {
+pub struct UnburgArgs {
     #[arg(long, short, default_value_t = 3)]
     pub size: usize,
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Dimburg {
+pub struct Unburg {
     pub size: usize,
     pub words: &'static str,
     pub color: Color,
 }
 
-impl Petersburg for Dimburg {
+impl Petersburg for Unburg {
     fn run(&self) {
         crossbeam::scope(|scope| {
             for i in 0..3 {
@@ -40,11 +40,11 @@ impl Petersburg for Dimburg {
     }
 }
 
-impl Dimburg {
-    pub fn new(args: DimburgArgs) -> Self {
+impl Unburg {
+    pub fn new(args: UnburgArgs) -> Self {
         Self {
             size: args.size,
-            words: "I'd buy that for a dollar",
+            words: "Some words exist here",
             color: color::BLUE,
         }
     }

@@ -49,14 +49,6 @@ impl Simpleburg {
 
         'main: loop {
             total = total + 1;
-            // if total % 500 == 0 {
-            //     println!("Thread {} launching {}th particle. So far {} have aged out, {} have crashed and {} made it",
-            //     index,
-            //     total,
-            //     aged,
-            //     crashed,
-            //     lived)
-            // }
             let mut dir = Compass::rand();
             let startx = size / 2 + rand::random::<usize>() % (size / 16) - (size / 32);
             let starty = size / 2 + rand::random::<usize>() % (size / 16) - (size / 32);
@@ -80,8 +72,6 @@ impl Simpleburg {
                 if lucky {
                     path.push(p);
                 };
-                //if (steps % 1000000 ==0) {println!("Thread {} has taken its {}nth step", index, steps)};
-                //if x == 0 || y == 0 || x == size as i32-1 || y == size as i32 - 1{
                 if Point::distance(center, p) > (size / 2 - 2) as f64 {
                     break;
                 }
@@ -132,10 +122,6 @@ impl Simpleburg {
             if Point::distance(center, p) < (size / 16) as f64 {
                 break 'main;
             }
-            // if (count % 10 == 0) {
-            //     let _unused = TOTAL_COUNT.fetch_add(10, Ordering::SeqCst);
-            // }
-            //println!("Thread {} performed its mission and wants more", index);
         }
         println!(
         "Thread {} finished after {} steps with a total of {} placed, {} crashed and {} aged out.",

@@ -57,47 +57,9 @@ pub fn simple_top_level(){
     }
 }
 
-// struct SelfReferential<'a>{
-//     species : [Species; 2],
-//     grid : Mutex<Vec<&'a Species>>
-// }
-// impl<'a> Simulation for SelfReferential<'a>{
-//     fn new() -> Self{
-//         let dogs = Species::new("dogs");
-//         let cats = Species::new("cats");
-//         let species = [dogs, cats];
-//         let grid = Mutex::new(vec!(&species[0]; 1000));
-//         Self{species, grid}
-//         //Self{species, grid}
-//     }
-//     fn run(&self){
-//         let mut grid = self.grid.lock().unwrap();
-//         let random_location = rand::random::<usize>() % grid.len();
-//         let old_species = grid[random_location];
-//         old_species.breed(-1);
-//         let random_species: &'a Species = &self.species[rand::random::<usize>() % 2];
-//         grid[random_location] = random_species;
-//         random_species.breed(1);
-//     }
-//     fn print_state(&self){
-//         for species in &self.species{
-//             println!("{species}")
-//         }
-//     }
-
-// }
-
-
-// pub fn self_referential_top_level(){
-//     let sim = Simple::new();
-//     for _ in 0 .. 10{
-//         sim.run();
-//         sim.print_state();
-//     }
-// }
 
 struct TwoLayer<'a>{
-    species : &'a [Species; 2], //Now just holds a reference rather than data
+    species : &'a [Species; 2],
     grid : Mutex<Vec<&'a Species>>
 }
 impl<'a> TwoLayer<'a>{
